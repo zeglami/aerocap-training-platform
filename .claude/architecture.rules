@@ -1,0 +1,133 @@
+# AeroCap — Architecture Rules
+# Lives at: .claude/architecture.rules — this repo only
+# Purpose : Naming conventions, structural expectations, repo organisation rules
+# Loaded  : Referenced by CLAUDE.md; apply to all code generation in this repo
+
+## Naming Conventions
+
+| Artifact | Convention | Example |
+|---|---|---|
+| Files | kebab-case | `booking-service.ts` |
+| Classes / Types / Interfaces | PascalCase | `ReservationService` |
+| Functions / variables | camelCase | `createReservation()` |
+| DB tables | snake_case | `pilot_profiles` |
+| DB columns | snake_case | `tenant_id`, `deleted_at` |
+| EventBridge events | `Domain.Entity.PastTense` | `Booking.Reservation.Created` |
+| AWS resources | `aerocap-{env}-{service}-{resource}` | `aerocap-prod-booking-table` |
+| AWS environments | `dev` / `staging` / `prod` | |
+| Tenant schemas | `tenant_{tenantId}` | `tenant_air-france-01` |
+| API routes | `/api/v{N}/{domain}/{resource}` | `/api/v1/booking/reservations` |
+
+## Repository Structure
+
+```
+AeroCap/
+├── CLAUDE.md                  # Project memory (this file's parent)
+├── .claude/
+│   ├── architecture.rules     # ← You are here
+│   ├── settings.json          # Hooks wiring
+│   └── commands/              # Slash commands (skills invocation)
+├── skills/                    # L2 Knowledge layer
+├── hooks/                     # L3 Guardrail scripts
+├── subagents/                 # L4 Delegation agents
+├── plugins/                   # L5 Distribution
+├── compliance/                # Living compliance documents
+├── apps/
+│   └── web/                   # Next.js frontend (App Router)
+└── services/
+    ├── user-service/
+    ├── booking-service/
+    ├── cbta-service/
+    ├── hris-service/
+    └── reporting-service/
+```
+
+## Microservice Internal Structure (enforced)
+
+```
+services/{name}-service/
+├── src/
+│   ├── handlers/       # Route handlers — input validation + response only
+│   ├── services/       # Business logic — no DB, no HTTP
+│   ├── repositories/   # DB queries — all queries include tenant_id
+│   ├── events/         # EventBridge publish + consume
+│   ├── schemas/        # Zod schemas — single source of truth for types
+│   ├── types/          # TypeScript interfaces (extend Zod inferred types)
+│   └── index.ts        # Express app bootstrap
+├── tests/
+│   └── integration/    # testcontainers — real DB, no mocks
+├── migrations/         # Sequential SQL files: 001_init.sql, 002_...sql
+├── openapi.yaml        # Written BEFORE implementation, not after
+└── package.json
+```
+
+## Multi-Tenancy Rules (CRITICAL)
+
+```
+✅ SELECT * FROM tenant_{tenantId}.reservations WHERE tenant_id = $1
+❌ SELECT * FROM reservations  (missing tenant schema + filter)
+❌ SELECT * FROM reservations WHERE tenant_id = req.body.tenantId  (user-controlled)
+
+✅ const tenantId = req.user.tenantId  (from verified JWT)
+❌ const tenantId = req.body.tenantId  (user-controlled — NEVER)
+❌ const tenantId = req.params.tenantId (user-controlled — NEVER)
+```
+
+## API Contract Rules
+
+- OpenAPI 3.0 spec: write it first, implement second — no exceptions.
+- Response envelope: `{ data: T | null, meta: { requestId, timestamp, page?, limit?, total? }, error: null | { code, message } }`
+- All IDs: UUID format (`format: uuid`). Never sequential integers in API.
+- Pagination: every list endpoint has `page`, `limit`, `total`.
+- Auth: `bearerAuth` on every endpoint except `/health` and `/api/auth/...`.
+- Errors: always structured — never plain strings, never stack traces to client.
+
+## TypeScript Rules
+
+- `"strict": true` — always on, no exceptions.
+- No `any`. Use `unknown` + type narrowing, or Zod `safeParse`.
+- No `// @ts-ignore`. Fix the type, don't suppress it.
+- Props interfaces: exported, named `{Component}Props`.
+- Zod schemas are the single source of type truth — export inferred types, don't duplicate.
+- Barrel exports: every module folder has an `index.ts`.
+- Co-locate tests: `feature.ts` and `feature.test.ts` in the same directory.
+
+## Event Design Rules
+
+Every EventBridge event payload MUST include:
+```typescript
+{
+  tenantId: string;    // mandatory
+  eventId: string;     // UUID — for idempotency
+  timestamp: string;   // ISO 8601
+  version: number;     // integer — for schema evolution
+  // ... domain fields
+}
+```
+Consumers are idempotent. Duplicate delivery must be handled safely.
+Never use events for synchronous request/response.
+
+## Testing Rules
+
+- Unit tests: Jest. 80% minimum coverage on service layer.
+- Integration tests: testcontainers (real PostgreSQL). No DB mocks.
+- E2E tests: Playwright. Cover all critical user flows (login, booking, CBTA report).
+- Test naming: `it('should {expected} when {condition}', ...)`.
+- Every repository method has a tenant isolation test — a mandatory, non-negotiable test case.
+
+## Security Rules
+
+- Secrets: AWS Secrets Manager only. Never `.env` files, never source code.
+- JWT: validate signature + expiry + issuer (`iss`) + audience (`aud`) on every request.
+- Input: Zod parse at handler boundary before any business logic.
+- SQL: parameterized queries only. No string interpolation in SQL.
+- Logs: never log JWT tokens, passwords, or PII fields.
+- CORS: never `*` in production. Whitelist only.
+
+## Git / PR Rules
+
+- Branch naming: `{type}/{ticket}-{description}` e.g. `feat/AC-42-booking-calendar`
+- Commit format: `{type}(scope): message` e.g. `feat(booking): add waiting list support`
+- Every PR must pass: lint + unit tests + tenant isolation review (`/review-tenant-isolation`)
+- No force push to `main`. No `--no-verify`. No skipping hooks.
+- PRs touching PII or compliance: require compliance-auditor subagent run before merge.

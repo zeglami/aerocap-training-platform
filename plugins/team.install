@@ -1,0 +1,66 @@
+#!/bin/bash
+# AeroCap Agent Development Kit — Team Install Script
+# Run once after cloning the repo to set up the full ADK for your local Claude Code session.
+
+set -e
+
+echo ""
+echo "Installing AeroCap Agent Development Kit..."
+echo ""
+
+# --- Check prerequisites ---
+check_command() {
+  if ! command -v "$1" &>/dev/null; then
+    echo "  MISSING: $1 is required. Install it and re-run."
+    exit 1
+  else
+    echo "  OK: $1 found ($(command -v $1))"
+  fi
+}
+
+echo "Checking prerequisites..."
+check_command "node"
+check_command "npx"
+check_command "python3"
+check_command "git"
+echo ""
+
+# --- Verify Node version ---
+NODE_MAJOR=$(node --version | sed 's/v//' | cut -d. -f1)
+if [ "$NODE_MAJOR" -lt 20 ]; then
+  echo "  WARNING: Node.js 20+ recommended. Found: $(node --version)"
+fi
+
+# --- Make hooks executable ---
+echo "Making hooks executable..."
+chmod +x hooks/PreToolUse.sh
+chmod +x hooks/PostToolUse.sh
+chmod +x hooks/SessionStart.sh
+echo "  Done."
+echo ""
+
+# --- Verify .claude/settings.json ---
+if [ -f ".claude/settings.json" ]; then
+  echo "  .claude/settings.json: present"
+else
+  echo "  WARNING: .claude/settings.json not found. Hooks will not be active."
+fi
+echo ""
+
+# --- Print summary ---
+echo "╔══════════════════════════════════════════════════════╗"
+echo "║        AeroCap ADK installed successfully            ║"
+echo "╚══════════════════════════════════════════════════════╝"
+echo ""
+echo "What's active:"
+echo "  Layer 1 — CLAUDE.md           Architecture rules (auto-loaded)"
+echo "  Layer 2 — Skills              /generate-microservice, /cbta-schema,"
+echo "                                /openapi-spec, /review-tenant-isolation"
+echo "  Layer 3 — Hooks               PreToolUse, PostToolUse, SessionStart"
+echo "  Layer 4 — Subagents           spec-generator, code-reviewer,"
+echo "                                test-runner, security-auditor"
+echo "  Layer 5 — Plugins             This manifest + install script"
+echo ""
+echo "Next step: open Claude Code in this directory and start with:"
+echo "  /generate-microservice user-service \"Manage tenants, organizations, users and roles\""
+echo ""

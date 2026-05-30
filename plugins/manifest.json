@@ -1,0 +1,132 @@
+{
+  "name": "aerocap-agent-kit",
+  "version": "1.0.0",
+  "description": "AeroCap Agent Development Kit — 5-layer Claude Code infrastructure for the AeroCap multi-tenant pilot training SaaS platform.",
+  "author": "AeroCap Engineering",
+  "repository": "github.com/aerocap/aerocap-agent-kit",
+
+  "layers": {
+    "memory": {
+      "description": "CLAUDE.md — project architecture rules loaded automatically in every session",
+      "files": ["CLAUDE.md"]
+    },
+    "skills": {
+      "description": "Knowledge layer — auto-matched domain rules, code templates, and subagent context briefs",
+      "files": [
+        "skills/SKILL.md",
+        "skills/context.md",
+        "skills/scripts/microservice-template.ts",
+        "skills/scripts/migration-template.sql",
+        "skills/scripts/component-template.tsx"
+      ],
+      "slash_commands": {
+        "description": "Explicitly-invoked slash commands (Claude Code .claude/commands/)",
+        "files": [
+          ".claude/commands/generate-microservice.md",
+          ".claude/commands/cbta-schema.md",
+          ".claude/commands/openapi-spec.md",
+          ".claude/commands/review-tenant-isolation.md"
+        ]
+      },
+      "commands": [
+        {
+          "name": "generate-microservice",
+          "description": "Scaffold a complete production-ready AeroCap microservice",
+          "usage": "/generate-microservice <domain> <description>"
+        },
+        {
+          "name": "cbta-schema",
+          "description": "Generate CBTA competency evaluation schema + TypeScript types + DB migration",
+          "usage": "/cbta-schema <competency-unit> [description]"
+        },
+        {
+          "name": "openapi-spec",
+          "description": "Generate a complete OpenAPI 3.0 spec from a feature description",
+          "usage": "/openapi-spec <service-name> <feature-description>"
+        },
+        {
+          "name": "review-tenant-isolation",
+          "description": "Audit code for multi-tenant data isolation violations",
+          "usage": "/review-tenant-isolation [file-or-directory]"
+        }
+      ]
+    },
+    "hooks": {
+      "description": "Guardrail shell scripts — enforced automatically by Claude Code",
+      "config": ".claude/settings.json",
+      "files": [
+        "hooks/PreToolUse.sh",
+        "hooks/PostToolUse.sh",
+        "hooks/SessionStart.sh"
+      ],
+      "guards": [
+        "Blocks: rm -rf, DROP TABLE, force push, production ops, .env writes",
+        "Auto-lints TypeScript files on write",
+        "Runs co-located Jest tests after file edits",
+        "Session banner with environment status on startup"
+      ]
+    },
+    "subagents": {
+      "description": "Specialist agents for delegated work — each runs in its own context window",
+      "files": [
+        "subagents/spec-generator.md",
+        "subagents/code-reviewer.md",
+        "subagents/test-runner.md",
+        "subagents/security-auditor.md"
+      ],
+      "agents": [
+        {
+          "name": "spec-generator",
+          "description": "Generates OpenAPI specs, DB schemas, and TypeScript types from feature descriptions"
+        },
+        {
+          "name": "code-reviewer",
+          "description": "Reviews code for multi-tenant isolation, security, and AeroCap architectural compliance"
+        },
+        {
+          "name": "test-runner",
+          "description": "Writes Jest unit + integration tests including mandatory tenant isolation tests"
+        },
+        {
+          "name": "security-auditor",
+          "description": "Full OWASP Top 10 + GDPR compliance audit for any code change"
+        },
+        {
+          "name": "frontend-developer",
+          "description": "Senior React/Next.js developer — builds pages, components, forms, and dashboards for the AeroCap portal"
+        },
+        {
+          "name": "compliance-auditor",
+          "description": "Multi-jurisdiction data protection compliance: GDPR, PIPL, DPDP Act, CCPA/CPRA, POPIA — audits code, schemas, and data flows"
+        }
+      ]
+    },
+    "plugins": {
+      "description": "Distribution layer — install script for new team members",
+      "files": [
+        "plugins/manifest.json",
+        "plugins/team.install.sh"
+      ]
+    }
+  },
+
+  "workflow": {
+    "description": "Standard AeroCap feature delivery pipeline using the ADK",
+    "steps": [
+      "1. Describe the feature in plain language",
+      "2. Run /openapi-spec to generate the API contract",
+      "3. Run /generate-microservice to scaffold the implementation",
+      "4. Hooks auto-lint and run tests on every file write",
+      "5. Spawn test-runner subagent to write missing test cases",
+      "6. Run /review-tenant-isolation before any PR",
+      "7. Spawn security-auditor for release gate audit",
+      "8. Spawn code-reviewer for final merge approval"
+    ]
+  },
+
+  "requirements": {
+    "claude_code": ">=1.0.0",
+    "node": ">=20.0.0",
+    "tools": ["python3", "npx", "git"]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "aerocap",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "services/*"
+  ],
+  "scripts": {
+    "dev": "concurrently --names \"users,booking,cbta,hris,programmes,instructors,deficits,scenarios,reports,lineops,schedule,web\" --prefix-colors \"blue,green,yellow,magenta,cyan,red,white,bgBlue,bgGreen,bgYellow,bgRed,bgMagenta\" \"npm run dev -w @aerocap/user-service\" \"npm run dev -w @aerocap/booking-service\" \"npm run dev -w @aerocap/cbta-service\" \"npm run dev -w @aerocap/hris-service\" \"npm run dev -w @aerocap/training-programmes\" \"npm run dev -w @aerocap/instructor-records\" \"npm run dev -w @aerocap/deficit-tracking\" \"npm run dev -w @aerocap/scenario-library\" \"npm run dev -w @aerocap/regulatory-reports\" \"npm run dev -w @aerocap/line-ops-interface\" \"npm run dev -w @aerocap/schedule-service\" \"npm run dev -w @aerocap/web\"",
+    "dev:core": "concurrently --names \"users,booking,cbta,hris,schedule,web\" --prefix-colors \"blue,green,yellow,magenta,cyan,bgRed,bgMagenta\" \"npm run dev -w @aerocap/user-service\" \"npm run dev -w @aerocap/booking-service\" \"npm run dev -w @aerocap/cbta-service\" \"npm run dev -w @aerocap/hris-service\" \"npm run dev -w @aerocap/schedule-service\" \"npm run dev -w @aerocap/web\"",
+    "dev:training": "concurrently --names \"programmes,instructors,deficits,scenarios,reports,lineops\" --prefix-colors \"cyan,red,white,bgBlue,bgGreen,bgYellow\" \"npm run dev -w @aerocap/training-programmes\" \"npm run dev -w @aerocap/instructor-records\" \"npm run dev -w @aerocap/deficit-tracking\" \"npm run dev -w @aerocap/scenario-library\" \"npm run dev -w @aerocap/regulatory-reports\" \"npm run dev -w @aerocap/line-ops-interface\"",
+    "build": "npm run build --workspaces --if-present",
+    "install:all": "npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.4.5"
+  }
+}
