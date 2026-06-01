@@ -4,7 +4,7 @@
 # Architecture rules:   .claude/architecture.rules
 
 ## What this project is
-Multi-tenant SaaS pilot training portal for AeroCap (Simaero).
+Multi-tenant SaaS pilot training portal for AeroCap.
 B2B (airlines, military operators) + B2C (individual pilots).
 4 regions: France · South Africa · China · India.
 Trains 5,000+ pilots/year for 250+ operators across 80 countries.

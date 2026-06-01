@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS users (
   first_name         TEXT NOT NULL,
   last_name          TEXT NOT NULL,
   role               TEXT NOT NULL DEFAULT 'PILOT'
-                       CHECK(role IN ('GLOBAL_ADMIN','COUNTRY_ADMIN','INSTRUCTOR','PILOT','MANAGER')),
+                       CHECK(role IN ('GLOBAL_ADMIN','COUNTRY_ADMIN','INSTRUCTOR','PILOT','MANAGER','PARTNER_ADMIN')),
   booking_authorized INTEGER NOT NULL DEFAULT 0,
   signup_method      TEXT NOT NULL DEFAULT 'admin' CHECK(signup_method IN ('admin','self')),
   scope              TEXT DEFAULT NULL,

@@ -113,7 +113,7 @@ export default function LoginPage() {
           </div>
 
           <p className="text-center text-sm text-slate-500 mt-5">
-            New pilot?{' '}
+            New pilot or partner?{' '}
             <Link href="/signup" className="text-brand font-medium hover:underline">Create an account</Link>
           </p>
         </div>

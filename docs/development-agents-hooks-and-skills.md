@@ -2,6 +2,7 @@
 
 **Status:** Project development workflow documentation  
 **Last reviewed:** 2026-05-30  
+**Last updated:** 2026-05-30 — added B2B partner example, updated recommended usage table  
 **Audience:** Engineers, product owners, compliance reviewers, AI-assisted contributors
 
 ## 1. Purpose
@@ -603,6 +604,16 @@ For AeroCap, this is especially important because training records are both pers
 7. `compliance/` records why data must remain regionally scoped and what happens when personal data is retained or erased.
 8. `plugins/` packages the same rules and workflow so other team members can reproduce them.
 
+### Example: B2B partner organisations
+
+1. `spec-generator` defines the Partner and PartnerMember entities, DB schema, OpenAPI, Zod schemas, and 6 EventBridge events in `specs/partner-b2b-spec.md`.
+2. `compliance-auditor` checks that partner organisation contact data and pilot membership records are correctly PII-tagged, tenant-scoped, and covered by the retention policy.
+3. `backend-developer` implements `partner-service` on port 3012 with 11 routes, the `resolvePartner()` ownership guard, fire-and-forget sync to `user-service`, and a realistic seed with 4 partner organisations and 6 members.
+4. `frontend-developer` builds the `/partners` list page, the `/partners/[partnerId]` detail page with member management (Authorise/Revoke/Remove), the Next.js API proxy at `/api/partner/[...path]`, and the updated sidebar nav entry.
+5. `frontend-developer` also redesigns `/signup` as a multi-step flow: type selector (Individual Pilot vs Partner Organisation) → individual form or partner enquiry form → success screen.
+6. `code-reviewer` checks that `PARTNER_ADMIN` cannot access other partners' data, that `tenantId` is still JWT-sourced only, and that the role is correctly added to the `user-service` DB CHECK constraint.
+7. `security-auditor` reviews the `resolvePartner()` membership check, the fire-and-forget sync risk, and the new public-facing partner enquiry form for abuse vectors.
+
 ## 9. Recommended Usage By Task
 
 | Task | Recommended support |
@@ -611,6 +622,8 @@ For AeroCap, this is especially important because training records are both pers
 | New UI page | `frontend-developer`, then `code-reviewer` |
 | Pilot PII change | Check `compliance/`, then `compliance-auditor`, `security-auditor`, `code-reviewer` |
 | Booking or simulator rule | `training-management`, `backend-developer`, `test-runner` |
+| Partner organisation management | `spec-generator`, `compliance-auditor`, `backend-developer`, `frontend-developer` |
+| New role or auth change | `security-auditor`, then `code-reviewer` — check all service auth middlewares |
 | Unknown code area | `explorer`, then the relevant specialist |
 | Pre-release review | `security-auditor` and `compliance-auditor` in parallel |
 | Merge readiness | `code-reviewer` |

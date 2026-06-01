@@ -2,6 +2,7 @@
 
 **Status:** Functional product documentation  
 **Last reviewed:** 2026-05-30  
+**Last updated:** 2026-05-30 — added PARTNER_ADMIN role, B2B partner signup flow, partner data boundaries  
 **Audience:** Product, engineering, compliance, operations
 
 ## 1. Purpose
@@ -196,6 +197,28 @@ Examples:
 
 The manager can switch active country only if their scope allows it. When a manager switches country, the session receives a new active `tenantId`. All service queries continue to filter by that active tenant.
 
+### Partner Admin
+
+A partner admin (`PARTNER_ADMIN`) represents a B2B operator organisation (airline, military unit, training academy, corporate operator).
+
+The partner admin can:
+
+- View and manage pilots within their own partner organisation
+- Add pilots to the partner's roster
+- Authorise and revoke simulator booking access for their pilots
+- View their organisation's compliance statistics (total members, authorised, pending, suspended)
+- Access the `/partners/[id]` detail page
+
+The partner admin cannot:
+
+- See pilots or partner records from other partner organisations
+- Access another tenant's data
+- Create or modify the partner entity itself (AeroCap managers control partner creation)
+- Access schedule management, instructor records, or regulatory reports
+- Bypass the PARTNER_ADMIN → own-partner membership check at the API level
+
+Data boundary: `partner-service` enforces that a `PARTNER_ADMIN` caller must have an active row in `partner_members` for the target `partner_id` and `tenant_id` before any route handler executes. This check runs inside `resolvePartner()` before any read or write.
+
 ### Global Admin
 
 A global admin can administer the platform across countries, but global access must still be audited.
@@ -236,6 +259,8 @@ Tenant-scoped data includes:
 - Scenarios
 - Regulatory reports
 - Audit logs
+- Partner organisations (`partners` table — `tenant_id` scoped)
+- Partner memberships (`partner_members` table — `tenant_id` scoped, additionally `partner_id` scoped for PARTNER_ADMIN)
 
 Reference data can be global only when it contains no personal data and no facility-specific operational data. Examples:
 
@@ -248,16 +273,26 @@ Even when reference data is global, tenant-specific copies may be needed if an a
 
 ## 7. Data Flow Requirements
 
-### Signup
+### Signup — Individual pilot (B2C)
 
-1. Pilot selects training country.
-2. The system maps the country to a tenant.
-3. User account is created in that tenant.
-4. Pilot receives a JWT containing the tenant.
-5. Pilot is redirected to the dashboard.
-6. Booking remains locked until approval.
+1. `/signup` displays a type selector: Individual Pilot or Partner Organisation.
+2. Pilot selects Individual Pilot and chooses a training facility (FR / ZA / CN / IN).
+3. The system maps the country to a `tenantId`.
+4. `user-service` creates a `PILOT` user with `booking_authorized = 0` in that tenant.
+5. Pilot receives a JWT containing the `tenantId` and is redirected to the dashboard.
+6. Booking remains locked (`bookingAuthorized = false`) until an AeroCap manager or `PARTNER_ADMIN` explicitly authorises it.
 
 The selected tenant must not be changed casually after signup because it determines data residency and regulatory scope.
+
+### Signup — Partner organisation (B2B)
+
+1. Operator selects Partner Organisation on the `/signup` type selector.
+2. The enquiry form collects: organisation name, type (AIRLINE/MILITARY/TRAINING_ACADEMY/CORPORATE/CHARTER), ICAO code, training regions needed, estimated pilot count, and contact details.
+3. The enquiry is received by AeroCap (production: CRM/notification; demo: success screen).
+4. AeroCap creates the partner record in `partner-service` and assigns a `PARTNER_ADMIN` user via `user-service`.
+5. `PARTNER_ADMIN` logs in, navigates to `/partners/[id]`, and adds their pilots to the partner's roster.
+6. For each pilot, `PARTNER_ADMIN` grants booking authorisation, which calls `user-service` to set `booking_authorized = 1` on that user.
+7. Partner data (partners table, partner_members table) is stored in the same regional data plane as the `tenantId` it belongs to.
 
 ### Booking
 
@@ -338,6 +373,9 @@ Tenant isolation is accepted when:
 - Reports are tenant-scoped by default.
 - Cross-region data export requires explicit authorization and audit logging.
 - Regional database placement matches the tenant data residency policy.
+- A `PARTNER_ADMIN` can only read and write records for the partner they are a member of (enforced at DB level in `partner-service`).
+- Partner data (`partners`, `partner_members`) is stored in the tenant's regional data plane.
+- A pilot cannot belong to more than one active partner per tenant (enforced by `UNIQUE(tenant_id, user_id)` on `partner_members`).
 
 Data residency is accepted when:
 

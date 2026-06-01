@@ -2,6 +2,7 @@
 
 **Status:** Architecture governance guide  
 **Last reviewed:** 2026-05-30  
+**Last updated:** 2026-05-30 — added B2B partner capability, PARTNER_ADMIN actor, Partners data domain  
 **Scope:** AeroCap platform architecture, data residency, tenant isolation, and delivery governance
 
 ## 1. Purpose
@@ -58,6 +59,7 @@ Architecture vision:
 | Capability | Description | Owning services |
 |---|---|---|
 | Identity and tenant management | Users, roles, tenants, manager switching | `user-service` |
+| B2B partner management | Partner organisations, pilot rosters, booking authorisation (B2B) | `partner-service` |
 | Simulator booking | Simulators, slots, reservations, booking rules | `booking-service` |
 | Time management | Operating schedules, blocked periods, maintenance, availability | `schedule-service` |
 | Competency assessment | CBTA units, assessments, progress | `cbta-service` |
@@ -73,11 +75,12 @@ Architecture vision:
 
 | Actor | Primary needs |
 |---|---|
-| Pilot | Register, view training records, book simulators when authorised, view progress/licences. |
+| Pilot | Register (B2C or via partner), view training records, book simulators when authorised, view progress/licences. |
 | Instructor | Assess pilots, view assigned sessions, use approved scenarios. |
 | Manager | Approve pilots, manage bookings and schedules, switch allowed countries. |
 | Country Admin | Operate one country/facility tenant. |
 | Global Admin | Platform administration across countries with audit. |
+| **Partner Admin** | Manage B2B organisation pilot roster, authorise/revoke booking access, view org compliance stats. |
 | Compliance / DPO | Review PII, retention, erasure, cross-border transfers. |
 | Inspector / Authority | Access evidence for training, licence, and simulator compliance. |
 
@@ -88,6 +91,7 @@ Architecture vision:
 | Domain | Main data | Classification |
 |---|---|---|
 | Identity | Users, emails, roles, tenant membership | PII |
+| Partners | Partner organisations, memberships, booking authorisation | PII (contact data), operational |
 | Pilot HRIS | Profiles, licences, medical/ratings | PII, regulatory |
 | Booking | Slots, reservations, simulator assignments | Operational, PII-linked |
 | Schedule | Closures, maintenance, holidays | Operational |
@@ -121,12 +125,34 @@ Data rules:
 ```text
 apps/web
   Next.js web portal
+  Routes: /login /signup(type-selector) /dashboard /bookings /schedule
+          /partners /partners/[id] /pilots /profile /licences /cbta /reports
+  API proxies: /api/users /api/booking /api/cbta /api/hris /api/schedule /api/partner /api/auth
 
-services/*
-  Express TypeScript microservices
+services/
+  user-service         :3001  — identity, roles, PARTNER_ADMIN, login, signup, company switching
+  booking-service      :3002  — simulators, slots, reservations, booking rules
+  cbta-service         :3003  — competency units, assessments, CBTA progress
+  hris-service         :3004  — pilot profiles, licences, type ratings
+  schedule-service     :3011  — operating schedules, blocked periods, maintenance, availability
+  line-ops-interface   :3010  — line training, sector logs, recency evidence
+  partner-service      :3012  — B2B partner organisations, memberships, booking authorisation ← NEW
+  training-programmes         — programmes, phases, modules, enrolments, FTMC
+  instructor-records          — instructor qualifications, examiner authorisations
+  deficit-tracking            — competency deficits, remedial actions
+  scenario-library            — training scenarios, injections, brief templates
+  regulatory-reports          — report templates, snapshots, inspector access
 
 docs/
   Architecture, functional, governance, ADR documentation
+  articles/ — published technical articles with screenshots
+
+specs/
+  geo-tenancy-spec.md
+  simulator-time-management-spec.md
+  training-management-spec.md
+  functional-training-management-center-spec.md
+  partner-b2b-spec.md  ← NEW
 
 compliance/
   PII inventory and retention policy
@@ -183,24 +209,26 @@ compliance/
 
 Priority architecture opportunities:
 
-1. Consolidate auth and role definitions into shared packages.
+1. Consolidate auth and role definitions into a shared package — now includes `PARTNER_ADMIN` in addition to existing roles.
 2. Add service-level OpenAPI files.
-3. Enforce schedule availability in booking creation.
+3. Enforce schedule availability in booking creation (ADR-006 — Proposed).
 4. Replace console-based propagation with EventBridge events and workers.
-5. Move test databases to isolated temporary paths.
-6. Add tenant isolation scanners in CI.
-7. Add compliance metadata checks for new PII fields.
-8. Plan regional production data planes.
+5. Replace fire-and-forget partner→user-service booking-auth sync with a reliable event or retry mechanism.
+6. Move test databases to isolated temporary paths.
+7. Add tenant isolation scanners in CI.
+8. Add compliance metadata checks for new PII fields (partner contact data added to `compliance/pii-inventory.md`).
+9. Plan regional production data planes.
+10. Add partner enquiry pipeline — in production the `/signup` partner enquiry form should POST to a CRM webhook or partner-service `inquiries` endpoint rather than returning a static success screen.
 
 ## 9. Migration Planning
 
 ### Phase 1: Stabilise local prototype
 
-- Fix TypeScript build failures.
-- Make tests deterministic.
+- Make tests deterministic (isolated temp SQLite databases).
 - Add per-service OpenAPI files.
-- Extract shared auth/roles/envelope utilities.
-- Add backend schedule availability guard for booking creation.
+- Extract shared auth/roles/envelope utilities — include all roles: `GLOBAL_ADMIN`, `COUNTRY_ADMIN`, `MANAGER`, `INSTRUCTOR`, `PILOT`, `PARTNER_ADMIN`.
+- Add backend schedule availability guard for booking creation (close ADR-006).
+- Add reliable partner→user-service booking-auth propagation (replace fire-and-forget with EventBridge or retry queue).
 
 ### Phase 2: Prepare production architecture
 

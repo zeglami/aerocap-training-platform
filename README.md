@@ -18,7 +18,6 @@ Each tenant has its own operational scope and data-residency requirements.
 ```text
 apps/
   web/       Next.js web portal
-  docs/      App-level documentation
   mobile/    Reserved mobile app area
 
 services/    TypeScript Express microservices

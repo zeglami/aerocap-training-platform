@@ -240,7 +240,7 @@ app.post('/api/v1/users', authenticate, requireRole('GLOBAL_ADMIN', 'COUNTRY_ADM
 
 // ─── Authorize pilot (admin action) ───────────────────────────────────────────
 
-app.post('/api/v1/users/:id/authorize', authenticate, requireRole('GLOBAL_ADMIN', 'COUNTRY_ADMIN', 'MANAGER'), (req: Request, res: Response) => {
+app.post('/api/v1/users/:id/authorize', authenticate, requireRole('GLOBAL_ADMIN', 'COUNTRY_ADMIN', 'MANAGER', 'PARTNER_ADMIN'), (req: Request, res: Response) => {
   const { tenantId } = req.user!;
   const now = new Date().toISOString();
 
@@ -256,7 +256,7 @@ app.post('/api/v1/users/:id/authorize', authenticate, requireRole('GLOBAL_ADMIN'
 
 // ─── Revoke pilot booking access (admin action) ───────────────────────────────
 
-app.post('/api/v1/users/:id/revoke', authenticate, requireRole('GLOBAL_ADMIN', 'COUNTRY_ADMIN', 'MANAGER'), (req: Request, res: Response) => {
+app.post('/api/v1/users/:id/revoke', authenticate, requireRole('GLOBAL_ADMIN', 'COUNTRY_ADMIN', 'MANAGER', 'PARTNER_ADMIN'), (req: Request, res: Response) => {
   const { tenantId } = req.user!;
   const now = new Date().toISOString();
 

@@ -10,7 +10,7 @@ Paste the relevant section into the Agent tool `prompt` when spawning a subagent
 ## Full Project Context Brief
 
 ```
-You are working on AeroCap — a multi-tenant SaaS pilot training portal built by Simaero.
+You are working on AeroCap — a multi-tenant SaaS pilot training portal built by AppDevs.
 
 COMPANY: AeroCap trains 5,000+ pilots/year for 250+ operators across 80 countries.
 Centers in France, South Africa, China, India.
